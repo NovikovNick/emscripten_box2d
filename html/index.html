@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Box2d for emscripten</title>
+</head>
+
+<body>
+    <canvas class="" id="game-canvas" style="position: absolute;z-index:-1;"></canvas>
+    <button id="testBtn">Press to test Box2d</button>
+</body>
+
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+
+<script>
+    var mouseDown = false;
+    document.body.onmousedown = () => { mouseDown = true; };
+    document.body.onmouseup = () => { mouseDown = false; };
+    let cameraOffset = { "x": 425, "y": 365 };
+    window.onmousemove = (e) => {
+        if (!mouseDown) return;
+        cameraOffset.x += e.movementX;
+        cameraOffset.y += e.movementY;
+        console.log("Camera offset", cameraOffset);
+    };
+    let cameraScale = 5;
+    window.addEventListener("wheel", e => {
+        cameraScale += 0.1 * Math.sign(event.deltaY);
+        console.log("Camera scale", cameraScale);
+    });
+
+    !function (e, t) {
+        console.log("Loading client...");
+        var n = "sample.wasm.js";
+        if (!e.WebAssembly) {
+            n = "sample.js"
+        }
+        console.log("Script set to " + n);
+        var o = t.createElement("script");
+        o.async = !0, o.type = "text/javascript", o.src = n, o.onerror = function (t) {
+            console.error("Script Error"), console.error(t), setTimeout(function () {
+                e.location.reload(!0)
+            }, 3e3)
+        };
+        var r = t.getElementsByTagName("script")[0];
+        r.parentNode.insertBefore(o, r)
+    }(window, document);
+
+    const GREEN = '#99f24f';
+    const RED = '#db3e21';
+    const BLUE = '#0d6efd';
+    const BG_COLOR = "#434659"
+    const BG_COLOR_2 = "#070d12";
+    const canvas = document.getElementById("game-canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    window.onresize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
+
+    function render(scene) {
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, BG_COLOR);
+        gradient.addColorStop(1, BG_COLOR_2);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < scene.size(); ++i) {
+            let collider = scene.get(i);
+
+            let posX = collider.position.x * cameraScale;
+            let posY = collider.position.y * cameraScale;
+            let width = collider.bounds.x * cameraScale;
+            let height = collider.bounds.y * cameraScale;
+
+            let p1 = { x: posX - width, y: posY - height };
+            let p2 = { x: posX + width, y: posY - height };
+            let p3 = { x: posX + width, y: posY + height };
+            let p4 = { x: posX - width, y: posY + height };
+
+            p1.y *= -1;
+            p2.y *= -1;
+            p3.y *= -1;
+            p4.y *= -1;
+
+            p1 = { x: p1.x + cameraOffset.x, y: p1.y + cameraOffset.y };
+            p2 = { x: p2.x + cameraOffset.x, y: p2.y + cameraOffset.y };
+            p3 = { x: p3.x + cameraOffset.x, y: p3.y + cameraOffset.y };
+            p4 = { x: p4.x + cameraOffset.x, y: p4.y + cameraOffset.y };
+
+            ctx.strokeStyle = GREEN;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.lineTo(p4.x, p4.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.stroke();
+        }
+    }
+
+    let prevTimestamp = 0;
+    function nextFrame(timestamp) {
+        let deltaTime = (timestamp - prevTimestamp) / 1000;
+        prevTimestamp = timestamp;
+
+        let scene = Module.nextFrame(deltaTime);
+        render(scene);
+
+        window.requestAnimationFrame(nextFrame);
+    }
+
+    $(function () {
+        $("#testBtn").click(() => {
+            Module.start();
+            window.requestAnimationFrame(nextFrame);
+        });
+    });
+</script>
+
+</html>
