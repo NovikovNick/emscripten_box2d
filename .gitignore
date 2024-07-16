@@ -33,3 +33,7 @@
 
 build
 .vscode
+
+#project
+*.wasm.js
+*.wasm.wasm

@@ -17,17 +17,34 @@
     var mouseDown = false;
     document.body.onmousedown = () => { mouseDown = true; };
     document.body.onmouseup = () => { mouseDown = false; };
-    let cameraOffset = { "x": 425, "y": 365 };
+    let cameraOffset = {
+        "x": 23,
+        "y": 693
+    };
     window.onmousemove = (e) => {
         if (!mouseDown) return;
         cameraOffset.x += e.movementX;
         cameraOffset.y += e.movementY;
         console.log("Camera offset", cameraOffset);
     };
-    let cameraScale = 5;
+    let cameraScale = 40.0;
     window.addEventListener("wheel", e => {
         cameraScale += 0.1 * Math.sign(event.deltaY);
         console.log("Camera scale", cameraScale);
+    });
+
+    let input = { up: false, left: false, down: false, right: false };
+    window.addEventListener('keydown', function (event) {
+        if (event.code == 'KeyW') input.up = true;
+        if (event.code == 'KeyA') input.left = true;
+        if (event.code == 'KeyS') input.down = true;
+        if (event.code == 'KeyD') input.right = true;
+    });
+    window.addEventListener('keyup', function (event) {
+        if (event.code == 'KeyW') input.up = false;
+        if (event.code == 'KeyA') input.left = false;
+        if (event.code == 'KeyS') input.down = false;
+        if (event.code == 'KeyD') input.right = false;
     });
 
     !function (e, t) {
@@ -44,7 +61,7 @@
             }, 3e3)
         };
         var r = t.getElementsByTagName("script")[0];
-        r.parentNode.insertBefore(o, r)
+        r.parentNode.insertBefore(o, r);
     }(window, document);
 
     const GREEN = '#99f24f';
@@ -70,6 +87,7 @@
 
         for (let i = 0; i < scene.size(); ++i) {
             let collider = scene.get(i);
+            let angle = collider.angle;
 
             let posX = collider.position.x * cameraScale;
             let posY = collider.position.y * cameraScale;
@@ -81,11 +99,13 @@
             let p3 = { x: posX + width, y: posY + height };
             let p4 = { x: posX - width, y: posY + height };
 
+            // flip
             p1.y *= -1;
             p2.y *= -1;
             p3.y *= -1;
             p4.y *= -1;
 
+            // camera offset
             p1 = { x: p1.x + cameraOffset.x, y: p1.y + cameraOffset.y };
             p2 = { x: p2.x + cameraOffset.x, y: p2.y + cameraOffset.y };
             p3 = { x: p3.x + cameraOffset.x, y: p3.y + cameraOffset.y };
@@ -107,7 +127,16 @@
         let deltaTime = (timestamp - prevTimestamp) / 1000;
         prevTimestamp = timestamp;
 
-        let scene = Module.nextFrame(deltaTime);
+        let inputForce = { x: 0, y: 0 };
+        if (input.up) inputForce.y += 1;
+        if (input.down) inputForce.y -= 1;
+        if (input.left) inputForce.x -= 1;
+        if (input.right) inputForce.x += 1;
+
+        inputForce.x *= 10;
+        inputForce.y *= 10;
+
+        let scene = Module.nextFrame(inputForce, deltaTime);
         render(scene);
 
         window.requestAnimationFrame(nextFrame);
